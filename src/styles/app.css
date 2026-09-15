@@ -235,3 +235,42 @@ dl.ctx-list { margin: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .conv-item, .tab, .icon-btn, .send-btn { transition: background-color 120ms ease; }
 }
+
+/* ---------- View switch (Consola de Traspaso / Sandbox) ---------- */
+.view-switch {
+  position: fixed; top: 10px; right: 16px; z-index: 30;
+  display: flex; gap: 6px; padding: 4px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--surface-3); box-shadow: var(--shadow-1);
+}
+.view-switch-btn {
+  border: 0; background: transparent; color: var(--ink-muted);
+  font-family: "Public Sans", system-ui, sans-serif; font-size: 0.72rem; font-weight: 600;
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+}
+.view-switch-btn.active { background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- Sandbox chat (citizen-facing bot tester) ---------- */
+.app-sandbox {
+  display: block; max-width: 720px; height: 100vh;
+}
+.app-sandbox .sandbox-thread { height: 100%; }
+.sandbox-clear-btn { display: inline-flex; }
+.sandbox-hint {
+  align-self: center; color: var(--ink-muted); font-size: 0.8rem; padding: 6px 0;
+}
+.sandbox-error {
+  align-self: center; color: var(--handover); background: var(--handover-soft);
+  border-radius: 8px; padding: 8px 12px; font-size: 0.8rem;
+}
+.msg-row.out .bubble.citizen {
+  background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px;
+}
+.sandbox-options {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+}
+.sandbox-option-chip {
+  text-align: left; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--surface-3);
+  background: var(--surface); color: var(--ink); font-size: 0.8rem; cursor: pointer;
+}
+.sandbox-option-chip:hover { background: var(--surface-2); }
+.sandbox-option-chip:disabled { opacity: 0.5; cursor: not-allowed; }
