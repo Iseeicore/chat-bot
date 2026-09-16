@@ -3,7 +3,7 @@
 // which models the human-agent handover queue (a different product surface,
 // still mock-only). This module talks to the real bot for manual testing.
 const SANDBOX_BASE =
-  (import.meta.env.VITE_SANDBOX_API_BASE_URL as string | undefined) ?? "http://localhost:3000";
+  (import.meta.env.SANDBOX_API_BASE_URL as string | undefined) ?? "http://localhost:3000";
 
 export interface SandboxListOption {
   readonly id: string;
