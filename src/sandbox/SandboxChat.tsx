@@ -39,6 +39,17 @@ interface SendInput {
 // literal here since this is a separate repo/deploy with no shared package.
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 
+// The real bot's /sandbox/events round-trip is often near-instant, which
+// made the "escribiendo…" bubble flash or never appear at all. Floor the
+// pending state at this long, so the typing animation always reads as a
+// deliberate beat rather than a glitch, even when the response is already
+// in hand.
+const MIN_TYPING_MS = 500;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function nowLabel(): string {
   return new Date().toTimeString().slice(0, 5);
 }
@@ -126,6 +137,9 @@ export function SandboxChat() {
       ...prev,
       { from: "citizen", text: citizenLabel, time: nowLabel(), imageUrl: input.previewUrl },
     ]);
+    const startedAt = Date.now();
+    let sent: readonly SandboxSent[] | null = null;
+    let failure: string | null = null;
     try {
       const res = await postSandboxEvent({
         from,
@@ -135,12 +149,18 @@ export function SandboxChat() {
         mediaId: input.mediaId,
         mediaMimeType: input.mediaMimeType,
       });
-      setMessages((prev) => [...prev, ...sentToMessages(res.sent)]);
+      sent = res.sent;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido al hablar con el bot.");
-    } finally {
-      setPending(false);
+      failure = err instanceof Error ? err.message : "Error desconocido al hablar con el bot.";
     }
+    // Reveal the result only once the typing bubble has had its full beat —
+    // whether the round-trip landed in 40ms or 4s, the citizen sees the same
+    // "the bot is composing" pause before the reply appears.
+    const remaining = MIN_TYPING_MS - (Date.now() - startedAt);
+    if (remaining > 0) await wait(remaining);
+    if (sent !== null) setMessages((prev) => [...prev, ...sentToMessages(sent!)]);
+    if (failure !== null) setError(failure);
+    setPending(false);
   }
 
   function handleAttachClick() {
@@ -298,7 +318,18 @@ export function SandboxChat() {
               </div>
             </div>
           ))}
-          {pending && <div className="wa-hint">Escribiendo…</div>}
+          {pending && (
+            <div className="wa-row in">
+              <div className="wa-msg-avatar" aria-hidden="true">
+                MD
+              </div>
+              <div className="wa-bubble in wa-bubble-typing" role="status" aria-label="El asistente está escribiendo">
+                <span className="wa-typing-dot" />
+                <span className="wa-typing-dot" />
+                <span className="wa-typing-dot" />
+              </div>
+            </div>
+          )}
           {error !== null && <div className="wa-error">{error}</div>}
           <div ref={bottomRef} />
         </section>
