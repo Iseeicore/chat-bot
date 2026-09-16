@@ -16,6 +16,15 @@ const WEBHOOK_CHANNEL_BASE =
 // pattern to reuse for anything actually sensitive.
 const WEBHOOK_CHANNEL_SECRET = (import.meta.env.VITE_WEBHOOK_CHANNEL_SECRET as string | undefined) ?? "";
 
+// Debugging toggle (explicit user decision): lets the auto-poll loop be
+// disabled via env (VITE_WEBHOOK_CHANNEL_POLLING_ENABLED=false), so a manual
+// refresh (WebhookChannel.tsx's "Actualizar" button) is the only thing
+// hitting GET /api/webhook-channel/messages — isolates whether a message is
+// really missing from the buffer vs. a polling/render bug. Defaults to
+// enabled (unset or anything other than the literal string "false").
+export const WEBHOOK_CHANNEL_POLLING_ENABLED =
+  (import.meta.env.VITE_WEBHOOK_CHANNEL_POLLING_ENABLED as string | undefined) !== "false";
+
 function authHeaders(): Record<string, string> {
   return { "x-webhook-channel-secret": WEBHOOK_CHANNEL_SECRET };
 }

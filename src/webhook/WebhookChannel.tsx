@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Composer } from "../components/Composer";
 import { ShieldIcon } from "../components/icons";
-import { fetchWebhookChannelMessages, sendWebhookChannelMessage, type WebhookChannelMessage } from "./webhookChannelApi";
+import {
+  fetchWebhookChannelMessages,
+  sendWebhookChannelMessage,
+  WEBHOOK_CHANNEL_POLLING_ENABLED,
+  type WebhookChannelMessage,
+} from "./webhookChannelApi";
 
 // Deliberately simple, no-SDD fast-path feature (explicit user decision):
 // polls the real backend every 2-3s instead of a WebSocket (no persistent
@@ -28,30 +33,41 @@ export function WebhookChannel() {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const fetched = await fetchWebhookChannelMessages();
-        if (cancelled) return;
-        setMessages(fetched);
-        setError(null);
-        // Auto-suggest who to reply to: the most recent real inbound sender,
-        // only while the human hasn't typed a destination yet.
-        if (toRef.current === "") {
-          const lastInbound = [...fetched].reverse().find((m) => m.direction === "in" && m.from !== undefined);
-          if (lastInbound?.from !== undefined) setTo(lastInbound.from);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Error desconocido leyendo el canal.");
+  // Shared by the auto-poll effect below AND the manual "Actualizar" button
+  // — same fetch either way. `cancelledRef` only matters for the effect's
+  // own interval/unmount lifecycle, not for a one-off manual click.
+  const cancelledRef = useRef(false);
+  async function poll() {
+    try {
+      const fetched = await fetchWebhookChannelMessages();
+      if (cancelledRef.current) return;
+      setMessages(fetched);
+      setError(null);
+      // Auto-suggest who to reply to: the most recent real inbound sender,
+      // only while the human hasn't typed a destination yet.
+      if (toRef.current === "") {
+        const lastInbound = [...fetched].reverse().find((m) => m.direction === "in" && m.from !== undefined);
+        if (lastInbound?.from !== undefined) setTo(lastInbound.from);
       }
+    } catch (err) {
+      if (!cancelledRef.current) setError(err instanceof Error ? err.message : "Error desconocido leyendo el canal.");
     }
+  }
 
+  useEffect(() => {
+    cancelledRef.current = false;
     void poll();
+    // Debugging toggle (explicit user decision): with polling off, only the
+    // manual "Actualizar" button below ever calls poll() — isolates whether
+    // a message is truly missing from the backend buffer vs. a polling bug.
+    if (!WEBHOOK_CHANNEL_POLLING_ENABLED) {
+      return () => {
+        cancelledRef.current = true;
+      };
+    }
     const intervalId = setInterval(() => void poll(), POLL_INTERVAL_MS);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       clearInterval(intervalId);
     };
   }, []);
@@ -104,9 +120,16 @@ export function WebhookChannel() {
               Canal Webhook
               <span className="wa-thread-badge">En vivo</span>
             </h2>
-            <p>Conectado al webhook real — actualiza cada {Math.round(POLL_INTERVAL_MS / 1000)}s</p>
+            <p>
+              {WEBHOOK_CHANNEL_POLLING_ENABLED
+                ? `Conectado al webhook real — actualiza cada ${Math.round(POLL_INTERVAL_MS / 1000)}s`
+                : "Conectado al webhook real — polling automático apagado"}
+            </p>
           </div>
           <div className="wa-spacer" />
+          <button type="button" className="wa-clear-btn" onClick={() => void poll()}>
+            Actualizar
+          </button>
         </header>
 
         <div style={{ padding: "10px 18px 0" }}>
