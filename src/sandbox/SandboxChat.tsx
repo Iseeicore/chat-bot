@@ -39,10 +39,19 @@ export function SandboxChat() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send(input: { type: "text" | "list" | "button"; text?: string; listId?: string }) {
+  async function send(input: {
+    type: "text" | "list" | "button";
+    text?: string;
+    listId?: string;
+    listTitle?: string;
+  }) {
     setError(null);
     setPending(true);
-    const citizenLabel = input.type === "text" ? (input.text ?? "") : (input.listId ?? "");
+    // The citizen's own outgoing bubble must show the tappable label they
+    // picked (e.g. "San Borja, Lima"), never the internal id (ubigeo code,
+    // especialidad code, renipress code) that travels as the WhatsApp list
+    // reply id — real WhatsApp shows the title, not the id, in that bubble.
+    const citizenLabel = input.type === "text" ? (input.text ?? "") : (input.listTitle ?? input.listId ?? "");
     setMessages((prev) => [...prev, { from: "citizen", text: citizenLabel, time: nowLabel() }]);
     try {
       const res = await postSandboxEvent({ from, ...input });
@@ -92,7 +101,7 @@ export function SandboxChat() {
                       type="button"
                       className="sandbox-option-chip"
                       disabled={pending}
-                      onClick={() => void send({ type: "list", listId: opt.id })}
+                      onClick={() => void send({ type: "list", listId: opt.id, listTitle: opt.title })}
                     >
                       {opt.title}
                     </button>
