@@ -264,7 +264,14 @@ dl.ctx-list { margin: 0; }
 
   display: grid;
   grid-template-columns: 320px 1fr;
+  /* Layered fallbacks, weakest first: 100vh for browsers with neither dvh
+     nor visualViewport, 100dvh for browsers that resize it for the keyboard
+     on their own (e.g. Chrome/Android with interactive-widget=resizes-content,
+     see index.html), then --wa-vh (set from visualViewport in
+     SandboxChat.tsx) for iOS Safari, which does neither. */
   height: 100vh;
+  height: 100dvh;
+  height: var(--wa-vh, 100dvh);
   background: var(--wa-bg-chat);
   color: var(--wa-text);
   font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;

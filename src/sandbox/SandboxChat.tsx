@@ -93,6 +93,27 @@ export function SandboxChat() {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages, pending, error]);
 
+  // 100vh/100dvh don't shrink for the on-screen keyboard on iOS Safari, so
+  // .wa-shell's fixed height stayed taller than what's actually visible —
+  // the composer, pinned to the bottom of that flex column, ended up
+  // hidden behind the keyboard. visualViewport.height does track the
+  // keyboard, so mirror it into a CSS var .wa-shell reads (app.css); the
+  // interactive-widget=resizes-content viewport meta (index.html) already
+  // covers this natively on Chrome/Android, this is the iOS/fallback path.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    function setViewportHeight() {
+      document.documentElement.style.setProperty("--wa-vh", `${viewport?.height ?? window.innerHeight}px`);
+    }
+    setViewportHeight();
+    viewport?.addEventListener("resize", setViewportHeight);
+    window.addEventListener("resize", setViewportHeight);
+    return () => {
+      viewport?.removeEventListener("resize", setViewportHeight);
+      window.removeEventListener("resize", setViewportHeight);
+    };
+  }, []);
+
   async function send(input: SendInput) {
     setError(null);
     setPending(true);
