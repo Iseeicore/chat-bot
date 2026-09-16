@@ -572,28 +572,6 @@ dl.ctx-list { margin: 0; }
 .wa-shell .composer input[type="text"]::placeholder { color: var(--wa-text-muted); }
 .wa-shell .send-btn { background: var(--wa-accent-2); color: #ffffff; }
 
-/* ---------- Webhook channel (visual-only preview, no real webhook wired) ---------- */
-.wh-url-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 18px; background: #ffffff; border-bottom: 1px solid var(--wa-border);
-}
-.wh-url-label {
-  font-size: 0.7rem; font-weight: 700; color: var(--wa-text-muted);
-  text-transform: uppercase; letter-spacing: 0.03em; flex: none;
-}
-.wh-url-input {
-  flex: 1; min-width: 0; padding: 6px 10px; border-radius: 8px;
-  border: 1px solid var(--wa-border); background: var(--wa-bg-chat);
-  color: var(--wa-text); font-size: 0.78rem;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-}
-.wh-url-copy {
-  flex: none; border: 1px solid var(--wa-border); background: #ffffff;
-  color: var(--wa-accent); border-radius: 8px; padding: 6px 12px;
-  font-size: 0.76rem; font-weight: 600; cursor: pointer;
-}
-.wh-url-copy:hover { background: var(--wa-active-row); }
-
 /* ---------- App-level preview switcher (Sandbox bot / Canal Webhook) ----------
    Deliberately a fixed overlay outside both .wa-shell instances, never a
    wrapping bar, so it never eats into their tuned 100dvh/--wa-vh height
@@ -616,8 +594,6 @@ dl.ctx-list { margin: 0; }
 .app-view-switch button.active { background: #0f9e94; color: #ffffff; }
 @media (max-width: 480px) {
   .app-view-switch { top: auto; bottom: 78px; right: 10px; }
-  .wh-url-bar { flex-wrap: wrap; padding: 8px 4%; }
-  .wh-url-label { width: 100%; }
 }
 
 /* ---------- Responsive ---------- */
