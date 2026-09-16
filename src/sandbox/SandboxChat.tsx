@@ -21,6 +21,10 @@ interface SendInput {
   readonly previewUrl?: string;
 }
 
+// Mirrors minsa-citas-whatsapp-bot's MAX_MEDIA_BYTES (40 MiB) — kept as a
+// literal here since this is a separate repo/deploy with no shared package.
+const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
+
 function nowLabel(): string {
   return new Date().toTimeString().slice(0, 5);
 }
@@ -104,6 +108,16 @@ export function SandboxChat() {
     // onChange the second time.
     e.target.value = "";
     if (file === undefined) return;
+
+    // Mirrors the backend's real cap (MAX_MEDIA_BYTES in
+    // meta-media-downloader.ts, raised for Reclamo evidence photos) so a
+    // too-large file is rejected here instead of only failing later.
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError(
+        `La imagen pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB — el límite es ${MAX_IMAGE_BYTES / (1024 * 1024)} MB.`
+      );
+      return;
+    }
 
     // The sandbox's media downloader is a fake that returns synthetic bytes
     // regardless of mediaId (see minsa-citas-whatsapp-bot's
