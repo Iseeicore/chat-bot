@@ -21,9 +21,9 @@ interface SendInput {
   readonly previewUrl?: string;
 }
 
-// Mirrors minsa-citas-whatsapp-bot's MAX_MEDIA_BYTES (40 MiB) — kept as a
+// Mirrors minsa-citas-whatsapp-bot's MAX_MEDIA_BYTES (50 MiB) — kept as a
 // literal here since this is a separate repo/deploy with no shared package.
-const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
 
 function nowLabel(): string {
   return new Date().toTimeString().slice(0, 5);
