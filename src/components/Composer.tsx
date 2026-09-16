@@ -4,9 +4,12 @@ import { AttachIcon, SendIcon } from "./icons";
 interface ComposerProps {
   disabled: boolean;
   onSend: (text: string) => void;
+  /** Wires up the attach button's click; the button stays inert without it. */
+  onAttach?: () => void;
+  placeholder?: string;
 }
 
-export function Composer({ disabled, onSend }: ComposerProps) {
+export function Composer({ disabled, onSend, onAttach, placeholder }: ComposerProps) {
   const [value, setValue] = useState("");
 
   function handleSubmit(e: FormEvent) {
@@ -19,13 +22,19 @@ export function Composer({ disabled, onSend }: ComposerProps) {
 
   return (
     <form className="composer" onSubmit={handleSubmit}>
-      <button type="button" className="icon-btn" aria-label="Adjuntar archivo">
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label="Adjuntar archivo"
+        onClick={onAttach}
+        disabled={disabled || onAttach === undefined}
+      >
         <AttachIcon />
       </button>
       <input
         id="composer-input"
         type="text"
-        placeholder={disabled ? "Esta conversación ya fue resuelta" : "Escriba como agente…"}
+        placeholder={placeholder ?? (disabled ? "Esta conversación ya fue resuelta" : "Escriba como agente…")}
         autoComplete="off"
         value={value}
         disabled={disabled}
