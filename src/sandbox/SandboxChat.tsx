@@ -8,7 +8,20 @@ interface SandboxMessage {
   readonly text: string;
   readonly time: string;
   readonly options?: readonly SandboxListOption[];
+  /**
+   * Only set for a WhatsApp "list" interactive message (never a "buttons"
+   * one) — its presence is what tells the renderer to show a single
+   * "Ver X" affordance that opens a modal instead of the always-inline
+   * chip row real WhatsApp uses for its (max-3) "buttons" type.
+   */
+  readonly listButtonLabel?: string;
   readonly imageUrl?: string;
+}
+
+/** The list currently open in the picker modal, or null when it's closed. */
+interface ActiveList {
+  readonly buttonLabel: string;
+  readonly options: readonly SandboxListOption[];
 }
 
 interface SendInput {
@@ -35,7 +48,7 @@ function sentToMessages(sent: readonly SandboxSent[]): SandboxMessage[] {
     if (s.kind === "text") return { from: "bot", text: s.body, time };
     if (s.kind === "interactive_list") {
       const options = s.list.sections.flatMap((section) => section.rows);
-      return { from: "bot", text: s.list.body, time, options };
+      return { from: "bot", text: s.list.body, time, options, listButtonLabel: s.list.buttonLabel };
     }
     return { from: "bot", text: s.buttons.body, time, options: s.buttons.buttons };
   });
@@ -60,6 +73,7 @@ export function SandboxChat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrls = useRef<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [activeList, setActiveList] = useState<ActiveList | null>(null);
 
   // Object URLs created for picked-image previews are per-browser-tab
   // resources — revoke every one still outstanding when the component
@@ -150,6 +164,12 @@ export function SandboxChat() {
     setFrom(newSandboxFrom());
     setMessages([]);
     setError(null);
+    setActiveList(null);
+  }
+
+  function handlePickListOption(opt: SandboxListOption) {
+    setActiveList(null);
+    void send({ type: "list", listId: opt.id, listTitle: opt.title });
   }
 
   return (
@@ -204,21 +224,39 @@ export function SandboxChat() {
                   <img className="wa-bubble-image" src={m.imageUrl} alt="Imagen enviada" />
                 )}
                 {m.text !== "" && <div className="wa-bubble-text">{m.text}</div>}
-                {m.options !== undefined && m.options.length > 0 && (
-                  <div className="wa-options">
-                    {m.options.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className="wa-option-chip"
-                        disabled={pending}
-                        onClick={() => void send({ type: "list", listId: opt.id, listTitle: opt.title })}
-                      >
-                        {opt.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {m.options !== undefined &&
+                  m.options.length > 0 &&
+                  (m.listButtonLabel !== undefined ? (
+                    // WhatsApp "list" interactive message: one affordance that
+                    // opens the picker modal, never the options inline.
+                    <button
+                      type="button"
+                      className="wa-list-open-btn"
+                      disabled={pending}
+                      onClick={() => setActiveList({ buttonLabel: m.listButtonLabel!, options: m.options! })}
+                    >
+                      <span className="wa-list-open-icon" aria-hidden="true">
+                        ☰
+                      </span>
+                      {m.listButtonLabel}
+                    </button>
+                  ) : (
+                    // WhatsApp "buttons" interactive message (max 3): always
+                    // shown inline, unchanged from before.
+                    <div className="wa-options">
+                      {m.options.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          className="wa-option-chip"
+                          disabled={pending}
+                          onClick={() => void send({ type: "list", listId: opt.id, listTitle: opt.title })}
+                        >
+                          {opt.title}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
                 <div className="wa-meta">
                   <span>{m.time}</span>
                 </div>
@@ -237,6 +275,43 @@ export function SandboxChat() {
           placeholder="Escribe un mensaje…"
         />
       </div>
+
+      {activeList !== null && (
+        <div className="wa-list-modal-backdrop" onClick={() => setActiveList(null)}>
+          <div className="wa-list-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="wa-list-modal-head">
+              <button
+                type="button"
+                className="wa-list-modal-close"
+                aria-label="Cerrar"
+                onClick={() => setActiveList(null)}
+              >
+                ✕
+              </button>
+              <span className="wa-list-modal-title">{activeList.buttonLabel}</span>
+            </header>
+            <div className="wa-list-modal-body">
+              {activeList.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className="wa-list-modal-row"
+                  disabled={pending}
+                  onClick={() => handlePickListOption(opt)}
+                >
+                  <span className="wa-list-modal-row-text">
+                    <span className="wa-list-modal-row-title">{opt.title}</span>
+                    {opt.description !== undefined && (
+                      <span className="wa-list-modal-row-desc">{opt.description}</span>
+                    )}
+                  </span>
+                  <span className="wa-list-modal-row-radio" aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

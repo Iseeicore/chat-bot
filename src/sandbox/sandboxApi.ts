@@ -8,6 +8,7 @@ const SANDBOX_BASE =
 export interface SandboxListOption {
   readonly id: string;
   readonly title: string;
+  readonly description?: string;
 }
 
 export interface SandboxSentText {
