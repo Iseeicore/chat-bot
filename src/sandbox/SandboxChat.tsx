@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Composer } from "../components/Composer";
+import { ShieldIcon } from "../components/icons";
 import type { SandboxListOption, SandboxSent } from "./sandboxApi";
 import { newSandboxFrom, postSandboxEvent } from "./sandboxApi";
 
@@ -188,10 +189,12 @@ export function SandboxChat() {
         </header>
         <div className="wa-chat-list">
           <div className="wa-chat-row wa-chat-row-active" aria-current="true">
-            <div className="wa-avatar">🤖</div>
+            <div className="wa-avatar">
+              <ShieldIcon />
+            </div>
             <div className="wa-chat-row-body">
               <div className="wa-chat-row-top">
-                <span className="wa-chat-row-name">Chatbot-sandbox</span>
+                <span className="wa-chat-row-name">Asistente MINSA Digital</span>
               </div>
               <p className="wa-chat-row-preview">{from}</p>
             </div>
@@ -201,10 +204,15 @@ export function SandboxChat() {
 
       <div className="wa-main">
         <header className="wa-thread-head">
-          <div className="wa-avatar wa-avatar-sm">🤖</div>
+          <div className="wa-avatar wa-avatar-sm wa-avatar-online">
+            <ShieldIcon />
+          </div>
           <div className="wa-thread-who">
-            <h2>Chatbot-sandbox</h2>
-            <p>{from}</p>
+            <h2>
+              Asistente MINSA Digital
+              <span className="wa-thread-badge">Oficial</span>
+            </h2>
+            <p>En línea · {from}</p>
           </div>
           <div className="wa-spacer" />
           <button type="button" className="wa-clear-btn" onClick={handleClear}>
@@ -213,11 +221,17 @@ export function SandboxChat() {
         </header>
 
         <section className="wa-messages" role="log" aria-live="polite" aria-atomic="true">
+          <div className="wa-date-divider">Hoy · Sandbox de pruebas</div>
           {messages.length === 0 && (
             <div className="wa-hint">Escribe cualquier mensaje para empezar (ej. &quot;hola&quot;).</div>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`wa-row ${m.from === "citizen" ? "out" : "in"}`}>
+              {m.from === "bot" && (
+                <div className="wa-msg-avatar" aria-hidden="true">
+                  MD
+                </div>
+              )}
               <div className={`wa-bubble ${m.from === "bot" ? "in" : "out"}`}>
                 {m.from === "bot" && <span className="wa-tag">MINSA · Asistente automático</span>}
                 {m.imageUrl !== undefined && (

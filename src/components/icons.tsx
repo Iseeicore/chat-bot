@@ -31,6 +31,15 @@ export function SendIcon() {
   );
 }
 
+export function ShieldIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6l7-3z" strokeLinejoin="round" />
+      <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function TicksIcon() {
   return (
     <svg width="13" height="9" viewBox="0 0 16 11" fill="none" stroke="currentColor" strokeWidth="1.6">
