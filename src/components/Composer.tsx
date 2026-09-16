@@ -7,9 +7,11 @@ interface ComposerProps {
   /** Wires up the attach button's click; the button stays inert without it. */
   onAttach?: () => void;
   placeholder?: string;
+  /** Fired when the text input gains focus (e.g. to scroll the thread into view for a mobile keyboard). */
+  onFocusInput?: () => void;
 }
 
-export function Composer({ disabled, onSend, onAttach, placeholder }: ComposerProps) {
+export function Composer({ disabled, onSend, onAttach, placeholder, onFocusInput }: ComposerProps) {
   const [value, setValue] = useState("");
 
   function handleSubmit(e: FormEvent) {
@@ -39,6 +41,7 @@ export function Composer({ disabled, onSend, onAttach, placeholder }: ComposerPr
         value={value}
         disabled={disabled}
         onChange={(e) => setValue(e.target.value)}
+        onFocus={onFocusInput}
       />
       <button type="submit" className="send-btn" aria-label="Enviar mensaje" disabled={disabled || !value.trim()}>
         <SendIcon />

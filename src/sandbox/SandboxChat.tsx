@@ -96,12 +96,16 @@ export function SandboxChat() {
     };
   }, []);
 
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }
+
   // Auto-scroll the (fixed-height, independently scrollable) message pane
   // to the newest message — new arrivals, the "Escribiendo…" hint, and any
   // error all land at the bottom of .wa-messages, not the composer, which
   // stays pinned.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    scrollToBottom();
   }, [messages, pending, error]);
 
   // 100vh/100dvh don't shrink for the on-screen keyboard on iOS Safari, so
@@ -115,6 +119,11 @@ export function SandboxChat() {
     const viewport = window.visualViewport;
     function setViewportHeight() {
       document.documentElement.style.setProperty("--wa-vh", `${viewport?.height ?? window.innerHeight}px`);
+      // The keyboard opening shrinks .wa-messages in place without moving
+      // its scroll position, so the last message that used to sit right
+      // above the composer slides out under the newly-covered area — pin
+      // back to it once the height actually changes.
+      scrollToBottom();
     }
     setViewportHeight();
     viewport?.addEventListener("resize", setViewportHeight);
@@ -165,6 +174,14 @@ export function SandboxChat() {
 
   function handleAttachClick() {
     fileInputRef.current?.click();
+  }
+
+  function handleComposerFocus() {
+    // Tapping the input fires before the on-screen keyboard has finished
+    // animating in on most mobile browsers — the visualViewport effect
+    // above re-scrolls once the resize actually lands, but jumping early
+    // (next frame) too avoids a visible stall before that catches up.
+    requestAnimationFrame(scrollToBottom);
   }
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -338,6 +355,7 @@ export function SandboxChat() {
           disabled={pending}
           onSend={(text) => void send({ type: "text", text })}
           onAttach={handleAttachClick}
+          onFocusInput={handleComposerFocus}
           placeholder="Escribe un mensaje…"
         />
       </div>
