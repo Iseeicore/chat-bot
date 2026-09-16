@@ -59,6 +59,7 @@ export function SandboxChat() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const objectUrls = useRef<string[]>([]);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Object URLs created for picked-image previews are per-browser-tab
   // resources — revoke every one still outstanding when the component
@@ -68,6 +69,14 @@ export function SandboxChat() {
       for (const url of objectUrls.current) URL.revokeObjectURL(url);
     };
   }, []);
+
+  // Auto-scroll the (fixed-height, independently scrollable) message pane
+  // to the newest message — new arrivals, the "Escribiendo…" hint, and any
+  // error all land at the bottom of .wa-messages, not the composer, which
+  // stays pinned.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, pending, error]);
 
   async function send(input: SendInput) {
     setError(null);
@@ -218,6 +227,7 @@ export function SandboxChat() {
           ))}
           {pending && <div className="wa-hint">Escribiendo…</div>}
           {error !== null && <div className="wa-error">{error}</div>}
+          <div ref={bottomRef} />
         </section>
 
         <Composer
