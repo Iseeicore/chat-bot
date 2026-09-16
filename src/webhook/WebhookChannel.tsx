@@ -1,42 +1,76 @@
 import { useEffect, useRef, useState } from "react";
 import { Composer } from "../components/Composer";
 import { ShieldIcon } from "../components/icons";
+import { fetchWebhookChannelMessages, sendWebhookChannelMessage, type WebhookChannelMessage } from "./webhookChannelApi";
 
-interface ChannelMessage {
-  readonly id: number;
-  readonly from: "out" | "in";
-  readonly text: string;
-  readonly time: string;
+// Deliberately simple, no-SDD fast-path feature (explicit user decision):
+// polls the real backend every 2-3s instead of a WebSocket (no persistent
+// Node process behind this Vercel deploy to host one) and shows whatever the
+// in-memory buffer currently holds — no local mock state anymore. See
+// webhookChannelApi.ts's header comment for the full trade-off list.
+const POLL_INTERVAL_MS = 2500;
+
+function timeLabel(iso: string): string {
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toTimeString().slice(0, 5);
 }
 
-function nowLabel(): string {
-  return new Date().toTimeString().slice(0, 5);
-}
-
-let nextId = 0;
-function makeMessage(from: ChannelMessage["from"], text: string): ChannelMessage {
-  nextId += 1;
-  return { id: nextId, from, text, time: nowLabel() };
-}
-
-/**
- * Visual-only shell for a future webhook-backed channel — no mock URL, no
- * seeded example messages, no simulated incoming reply. The backend owns
- * the real connection/reply logic once it exists; this only renders what
- * you type as an outgoing bubble, same shell/bubble/composer look as
- * SandboxChat (.wa-* classes in app.css) so both panels stay visually
- * consistent.
- */
 export function WebhookChannel() {
-  const [messages, setMessages] = useState<ChannelMessage[]>([]);
+  const [messages, setMessages] = useState<readonly WebhookChannelMessage[]>([]);
+  const [to, setTo] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const toRef = useRef(to);
+  toRef.current = to;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
-  function handleSend(text: string) {
-    setMessages((prev) => [...prev, makeMessage("out", text)]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const fetched = await fetchWebhookChannelMessages();
+        if (cancelled) return;
+        setMessages(fetched);
+        setError(null);
+        // Auto-suggest who to reply to: the most recent real inbound sender,
+        // only while the human hasn't typed a destination yet.
+        if (toRef.current === "") {
+          const lastInbound = [...fetched].reverse().find((m) => m.direction === "in" && m.from !== undefined);
+          if (lastInbound?.from !== undefined) setTo(lastInbound.from);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Error desconocido leyendo el canal.");
+      }
+    }
+
+    void poll();
+    const intervalId = setInterval(() => void poll(), POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  async function handleSend(text: string) {
+    if (to.trim() === "") {
+      setError("Escribe primero el número de destino (arriba del mensaje).");
+      return;
+    }
+    setPending(true);
+    setError(null);
+    try {
+      const sent = await sendWebhookChannelMessage(to.trim(), text);
+      setMessages((prev) => [...prev, sent]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido al enviar.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -54,7 +88,7 @@ export function WebhookChannel() {
               <div className="wa-chat-row-top">
                 <span className="wa-chat-row-name">Canal Webhook</span>
               </div>
-              <p className="wa-chat-row-preview">Vista previa — sin conexión real</p>
+              <p className="wa-chat-row-preview">Mensajes reales — sin bot automático</p>
             </div>
           </div>
         </div>
@@ -68,36 +102,55 @@ export function WebhookChannel() {
           <div className="wa-thread-who">
             <h2>
               Canal Webhook
-              <span className="wa-thread-badge">Vista previa</span>
+              <span className="wa-thread-badge">En vivo</span>
             </h2>
-            <p>Aún no conectado a un webhook real</p>
+            <p>Conectado al webhook real — actualiza cada {Math.round(POLL_INTERVAL_MS / 1000)}s</p>
           </div>
           <div className="wa-spacer" />
         </header>
 
+        <div style={{ padding: "10px 18px 0" }}>
+          <input
+            type="text"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="Número de destino (ej. 51987654321)"
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--wa-border)",
+              background: "var(--wa-bg-chat)",
+              color: "var(--wa-text)",
+              fontSize: "0.85rem",
+            }}
+          />
+        </div>
+
         <section className="wa-messages" role="log" aria-live="polite" aria-atomic="true">
           {messages.length === 0 && (
-            <div className="wa-hint">Escribe cualquier mensaje para empezar.</div>
+            <div className="wa-hint">Esperando mensajes reales del webhook…</div>
           )}
           {messages.map((m) => (
-            <div key={m.id} className={`wa-row ${m.from === "out" ? "out" : "in"}`}>
-              {m.from === "in" && (
+            <div key={m.id} className={`wa-row ${m.direction === "out" ? "out" : "in"}`}>
+              {m.direction === "in" && (
                 <div className="wa-msg-avatar" aria-hidden="true">
                   WH
                 </div>
               )}
-              <div className={`wa-bubble ${m.from === "in" ? "in" : "out"}`}>
+              <div className={`wa-bubble ${m.direction === "in" ? "in" : "out"}`}>
                 <div className="wa-bubble-text">{m.text}</div>
                 <div className="wa-meta">
-                  <span>{m.time}</span>
+                  <span>{timeLabel(m.timestamp)}</span>
                 </div>
               </div>
             </div>
           ))}
+          {error !== null && <div className="wa-error">{error}</div>}
           <div ref={bottomRef} />
         </section>
 
-        <Composer disabled={false} onSend={handleSend} placeholder="Escribe un mensaje…" />
+        <Composer disabled={pending} onSend={(text) => void handleSend(text)} placeholder="Escribe un mensaje…" />
       </div>
     </div>
   );
