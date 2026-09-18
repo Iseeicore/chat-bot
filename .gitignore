@@ -4,3 +4,4 @@ dist-node-types/
 *.tsbuildinfo
 .env
 *.log
+.atl/
